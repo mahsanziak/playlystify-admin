@@ -126,6 +126,69 @@ const ShowPage: React.FC = () => {
     };
   }, [show_id, code, token]);
 
+  const addToQueue = async (song: string, artist: string, requestId: string) => {
+    const playlistId = '56eZf25Jow0s4brTYx2mCb'; // Your Spotify playlist ID
+
+    if (!token) {
+      alert('Spotify token is not available');
+      return;
+    }
+
+    const trackInfo = await fetchTrackId(song, artist, token);
+
+    if (!trackInfo.id) {
+      alert('Could not find track on Spotify');
+      return;
+    }
+
+    const trackUri = `spotify:track:${trackInfo.id}`;
+
+    // Validate the track ID format (base62)
+    const isValidBase62 = /^[0-9A-Za-z]+$/.test(trackInfo.id);
+    if (!isValidBase62) {
+      alert('Invalid track ID format');
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+        method: 'POST',
+        body: JSON.stringify({ uris: [trackUri] }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Error adding track to playlist:', data);
+        alert(`Error adding track to playlist: ${data.error.message}`);
+      } else {
+        console.log('Track added to playlist:', data);
+        // Remove the song from the list
+        setRequests((prevRequests) => prevRequests.filter((request) => request.id !== requestId));
+      }
+    } catch (error) {
+      console.error('Error adding track to playlist:', error);
+      alert('Error adding track to playlist. Check the console for more details.');
+    }
+  };
+
+  const deleteRequest = async (requestId: string) => {
+    const { error } = await supabase
+      .from('requests')
+      .delete()
+      .eq('id', requestId);
+
+    if (error) {
+      console.error('Error deleting request:', error);
+    } else {
+      setRequests((prevRequests) => prevRequests.filter((request) => request.id !== requestId));
+    }
+  };
+
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '32px' }}>Loading...</div>;
   }
@@ -148,9 +211,9 @@ const ShowPage: React.FC = () => {
       <main style={mainStyle}>
         {showName && <h2 style={headingStyle}>{showName}</h2>}
         {isMobileView ? (
-          <SwipingInterface requests={requests} setRequests={setRequests} token={token!} />
+          <SwipingInterface requests={requests} token={token!} addToQueue={addToQueue} deleteRequest={deleteRequest} />
         ) : (
-          <SongRequestTable requests={requests} setRequests={setRequests} token={token!} />
+          <SongRequestTable requests={requests} token={token!} addToQueue={addToQueue} deleteRequest={deleteRequest} />
         )}
       </main>
     </div>

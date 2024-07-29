@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import TinderCard from 'react-tinder-card';
 import fetchTrackId from '../../utils/fetchTrackId';
 
@@ -13,48 +13,24 @@ type Request = {
   created_at: string;
 };
 
-const SwipingInterface: React.FC<{ requests: Request[]; setRequests: React.Dispatch<React.SetStateAction<Request[]>>; token: string }> = ({ requests, setRequests, token }) => {
-  const onSwipe = async (direction: string, request: Request) => {
+const SwipingInterface: React.FC<{ requests: Request[]; token: string; addToQueue: (song: string, artist: string, requestId: string) => void; deleteRequest: (requestId: string) => void }> = ({ requests, token, addToQueue, deleteRequest }) => {
+  const [swipeDirection, setSwipeDirection] = useState<string | null>(null);
+
+  const onSwipe = (direction: string, request: Request) => {
     if (direction === 'right') {
-      const trackInfo = await fetchTrackId(request.song, request.artist, token);
-      if (!trackInfo.id) {
-        alert('Could not find track on Spotify');
-        return;
-      }
-      const trackUri = `spotify:track:${trackInfo.id}`;
-      const playlistId = '56eZf25Jow0s4brTYx2mCb';
-
-      // Validate the track ID format (base62)
-      const isValidBase62 = /^[0-9A-Za-z]+$/.test(trackInfo.id);
-      if (!isValidBase62) {
-        alert('Invalid track ID format');
-        return;
-      }
-
-      try {
-        const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
-          method: 'POST',
-          body: JSON.stringify({ uris: [trackUri] }),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          console.error('Error adding track to playlist:', data);
-          alert(`Error adding track to playlist: ${data.error.message}`);
-        } else {
-          console.log('Track added to playlist:', data);
-        }
-      } catch (error) {
-        console.error('Error adding track to playlist:', error);
-        alert('Error adding track to playlist. Check the console for more details.');
-      }
+      addToQueue(request.song, request.artist, request.id);
+    } else if (direction === 'left') {
+      deleteRequest(request.id);
     }
-    // Remove the song from the list regardless of swipe direction
-    setRequests((prevRequests) => prevRequests.filter((r) => r.id !== request.id));
+    setSwipeDirection(null);
+  };
+
+  const onCardLeftScreen = (direction: string) => {
+    setSwipeDirection(null);
+  };
+
+  const onSwipeDirection = (direction: string) => {
+    setSwipeDirection(direction);
   };
 
   if (requests.length === 0) {
@@ -68,6 +44,8 @@ const SwipingInterface: React.FC<{ requests: Request[]; setRequests: React.Dispa
           className="swipe"
           key={request.id}
           onSwipe={(dir) => onSwipe(dir, request)}
+          onCardLeftScreen={onCardLeftScreen}
+          onSwipeRequirementFulfilled={onSwipeDirection}
         >
           <div className="card">
             <div className="thumbnail-container">
@@ -75,6 +53,12 @@ const SwipingInterface: React.FC<{ requests: Request[]; setRequests: React.Dispa
             </div>
             <h3>{request.song}</h3>
             <p>{request.artist}</p>
+            {swipeDirection === 'left' && (
+              <div className="swipe-symbol swipe-symbol-left">×</div>
+            )}
+            {swipeDirection === 'right' && (
+              <div className="swipe-symbol swipe-symbol-right">+</div>
+            )}
           </div>
         </TinderCard>
       ))}

@@ -7,6 +7,7 @@
   overflow: hidden;
   margin: 0 auto;
   padding: 20px;
+  position: relative;
 }
 
 .swipe {
@@ -55,4 +56,31 @@
   padding: 10px;
   font-size: 18px;
   color: #fff; /* White text for better contrast */
+}
+
+.swipe-symbol {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 48px;
+  font-weight: bold;
+  color: white;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.swipe-symbol-left {
+  left: 10%;
+  color: #ef4444; /* Red color for delete */
+}
+
+.swipe-symbol-right {
+  right: 10%;
+  color: #1DB954; /* Green color for add */
+}
+
+.swipe.swipe-left .swipe-symbol-left,
+.swipe.swipe-right .swipe-symbol-right {
+  opacity: 1;
 }
