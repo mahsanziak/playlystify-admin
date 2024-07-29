@@ -4,7 +4,7 @@ import Header from '../../../../components/Header';
 import SongRequestTable from '../../../../components/SongRequestTable';
 import SwipingInterface from '../../../../components/SwipingInterface';
 import { supabase } from '../../../../../utils/supabaseClient';
-import fetchTrackId from '../../../../../utils/fetchTrackId'; // Ensure this is correctly imported
+import fetchTrackId from '../../../../../utils/fetchTrackId';
 
 const pageStyle: React.CSSProperties = {
   display: 'flex',
@@ -98,6 +98,32 @@ const ShowPage: React.FC = () => {
 
     validateShow();
     fetchRequests();
+
+    const channel = supabase
+      .channel('custom-all-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'requests', filter: `show_id=eq.${show_id}` },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setRequests((prevRequests) => [...prevRequests, payload.new as Request]);
+          } else if (payload.eventType === 'UPDATE') {
+            setRequests((prevRequests) =>
+              prevRequests.map((request) =>
+                request.id === (payload.new as Request).id ? (payload.new as Request) : request
+              )
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setRequests((prevRequests) => prevRequests.filter((request) => request.id !== (payload.old as Request).id));
+          }
+        }
+      );
+
+    channel.subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [show_id, code, token]);
 
   if (loading) {

@@ -44,12 +44,6 @@ const buttonStyle: React.CSSProperties = {
   border: 'none',
 };
 
-const editButtonStyle: React.CSSProperties = {
-  ...buttonStyle,
-  backgroundColor: '#3b82f6',
-  marginRight: '8px',
-};
-
 const deleteButtonStyle: React.CSSProperties = {
   ...buttonStyle,
   backgroundColor: '#ef4444',
@@ -76,7 +70,14 @@ const SongRequestTable: React.FC<{ requests: Request[]; setRequests: React.Dispa
       if (error) {
         console.error('Error fetching song requests:', error);
       } else {
-        setRequests(data as Request[]);
+        const requestsWithThumbnails = await Promise.all(data.map(async (request: Request) => {
+          const trackInfo = await fetchTrackId(request.song, request.artist, token);
+          return {
+            ...request,
+            thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/150'
+          };
+        }));
+        setRequests(requestsWithThumbnails);
       }
       setLoading(false);
     };
@@ -90,17 +91,15 @@ const SongRequestTable: React.FC<{ requests: Request[]; setRequests: React.Dispa
         { event: '*', schema: 'public', table: 'requests', filter: `show_id=eq.${requests[0]?.show_id}` },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            setRequests((prev) =>
-              sortOrder === 'asc' ? [...prev, payload.new as Request] : [payload.new as Request, ...prev]
-            );
+            setRequests((prevRequests) => [...prevRequests, payload.new as Request]);
           } else if (payload.eventType === 'UPDATE') {
-            setRequests((prev) =>
-              prev.map((request) =>
+            setRequests((prevRequests) =>
+              prevRequests.map((request) =>
                 request.id === (payload.new as Request).id ? (payload.new as Request) : request
               )
             );
           } else if (payload.eventType === 'DELETE') {
-            setRequests((prev) => prev.filter((request) => request.id !== (payload.old as Request).id));
+            setRequests((prevRequests) => prevRequests.filter((request) => request.id !== (payload.old as Request).id));
           }
         }
       );
@@ -110,7 +109,7 @@ const SongRequestTable: React.FC<{ requests: Request[]; setRequests: React.Dispa
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [requests[0]?.show_id, sortOrder]);
+  }, [requests[0]?.show_id, sortOrder, token]);
 
   const toggleSortOrder = () => {
     setSortOrder((prevOrder) => (prevOrder === 'asc' ? 'desc' : 'asc'));
@@ -210,7 +209,6 @@ const SongRequestTable: React.FC<{ requests: Request[]; setRequests: React.Dispa
               <td style={tdStyle}>{request.dedication}</td>
               <td style={tdStyle}>{request.status}</td>
               <td style={tdStyle}>
-                <button style={editButtonStyle}>Edit</button>
                 <button style={deleteButtonStyle} onClick={() => deleteRequest(request.id)}>Delete</button>
                 <button
                   style={{ ...buttonStyle, backgroundColor: '#1DB954' }}

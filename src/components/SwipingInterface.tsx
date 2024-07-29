@@ -70,7 +70,9 @@ const SwipingInterface: React.FC<{ requests: Request[]; setRequests: React.Dispa
           onSwipe={(dir) => onSwipe(dir, request)}
         >
           <div className="card">
-            <img src={request.thumbnail || 'https://via.placeholder.com/150'} alt={`${request.artist} - ${request.song}`} />
+            <div className="thumbnail-container">
+              <img src={request.thumbnail || 'https://via.placeholder.com/150'} alt={`${request.artist} - ${request.song}`} />
+            </div>
             <h3>{request.song}</h3>
             <p>{request.artist}</p>
           </div>
