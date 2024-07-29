@@ -1,7 +1,13 @@
+// Header.tsx
 import React from 'react';
 import { useRouter } from 'next/router';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  isMobileView: boolean;
+  toggleView: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ isMobileView, toggleView }) => {
   const router = useRouter();
 
   return (
@@ -20,6 +26,12 @@ const Header: React.FC = () => {
             onClick={() => router.push('/show-details')}
           >
             Show Details
+          </button>
+          <button
+            className="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
+            onClick={toggleView}
+          >
+            {isMobileView ? 'Switch to Table View' : 'Switch to Swipe View'}
           </button>
         </nav>
       </div>

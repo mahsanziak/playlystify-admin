@@ -117,7 +117,7 @@ const SongRequestTable: React.FC<{ showId: string; code: string; token: string }
     setSortOrder((prevOrder) => (prevOrder === 'asc' ? 'desc' : 'asc'));
   };
 
-  const addToPlaylist = async (song: string, artist: string) => {
+  const addToPlaylist = async (song: string, artist: string, requestId: string) => {
     const playlistId = '56eZf25Jow0s4brTYx2mCb'; // Your Spotify playlist ID
 
     if (!token) {
@@ -125,14 +125,21 @@ const SongRequestTable: React.FC<{ showId: string; code: string; token: string }
       return;
     }
 
-    const trackId = await fetchTrackId(song, artist, token);
+    const trackInfo = await fetchTrackId(song, artist, token);
 
-    if (!trackId) {
+    if (!trackInfo.id) {
       alert('Could not find track on Spotify');
       return;
     }
 
-    const trackUri = `spotify:track:${trackId}`;
+    const trackUri = `spotify:track:${trackInfo.id}`;
+
+    // Validate the track ID format (base62)
+    const isValidBase62 = /^[0-9A-Za-z]+$/.test(trackInfo.id);
+    if (!isValidBase62) {
+      alert('Invalid track ID format');
+      return;
+    }
 
     try {
       const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
@@ -151,6 +158,8 @@ const SongRequestTable: React.FC<{ showId: string; code: string; token: string }
         alert(`Error adding track to playlist: ${data.error.message}`);
       } else {
         console.log('Track added to playlist:', data);
+        // Remove the song from the list
+        setRequests((prevRequests) => prevRequests.filter((request) => request.id !== requestId));
       }
     } catch (error) {
       console.error('Error adding track to playlist:', error);
@@ -193,7 +202,7 @@ const SongRequestTable: React.FC<{ showId: string; code: string; token: string }
                 <button style={deleteButtonStyle}>Delete</button>
                 <button
                   style={{ ...buttonStyle, backgroundColor: '#1DB954' }}
-                  onClick={() => addToPlaylist(request.song, request.artist)}
+                  onClick={() => addToPlaylist(request.song, request.artist, request.id)}
                 >
                   Add to Playlist
                 </button>

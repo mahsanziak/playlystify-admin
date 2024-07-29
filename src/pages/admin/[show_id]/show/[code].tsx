@@ -1,7 +1,9 @@
+// [code].tsx
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Header from '../../../../components/Header';
 import SongRequestTable from '../../../../components/SongRequestTable';
+import SwipingInterface from '../../../../components/SwipingInterface';
 import { supabase } from '../../../../../utils/supabaseClient';
 
 const pageStyle: React.CSSProperties = {
@@ -32,6 +34,11 @@ const ShowPage: React.FC = () => {
   const [validShow, setValidShow] = useState(false);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(process.env.NEXT_PUBLIC_SPOTIFY_TOKEN || null);
+  const [isMobileView, setIsMobileView] = useState(false);
+
+  const toggleView = () => {
+    setIsMobileView((prevView) => !prevView);
+  };
 
   useEffect(() => {
     const validateShow = async () => {
@@ -56,7 +63,6 @@ const ShowPage: React.FC = () => {
 
     validateShow();
 
-    // Fetch the token from the URL query parameters if it's not set
     if (!token) {
       const urlParams = new URLSearchParams(window.location.search);
       const accessToken = urlParams.get('access_token');
@@ -73,7 +79,7 @@ const ShowPage: React.FC = () => {
   if (!validShow) {
     return (
       <div style={pageStyle}>
-        <Header />
+        <Header isMobileView={isMobileView} toggleView={toggleView} />
         <main style={mainStyle}>
           <h2 style={{ ...headingStyle, color: '#ef4444' }}>Invalid Show ID or Code</h2>
           <p>Please check the URL and try again.</p>
@@ -84,11 +90,15 @@ const ShowPage: React.FC = () => {
 
   return (
     <div style={pageStyle}>
-      <Header />
+      <Header isMobileView={isMobileView} toggleView={toggleView} />
       <main style={mainStyle}>
         {showName && <h2 style={headingStyle}>{showName}</h2>}
         {show_id && code && token && (
-          <SongRequestTable showId={show_id as string} code={code as string} token={token} />
+          isMobileView ? (
+            <SwipingInterface showId={show_id as string} code={code as string} token={token} />
+          ) : (
+            <SongRequestTable showId={show_id as string} code={code as string} token={token} />
+          )
         )}
       </main>
     </div>
