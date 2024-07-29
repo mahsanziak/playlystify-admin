@@ -1,20 +1,19 @@
-/* Add this to globals.css or a specific CSS module */
-
 .swipe-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100%;
+  height: calc(100vh - 60px); /* Adjust height to leave space for header and toggle button */
+  width: 100%;
+  overflow: hidden;
   margin: 0 auto;
-  max-width: 500px;
   padding: 20px;
 }
 
 .swipe {
   position: absolute;
-  width: 100%;
+  width: 90%;
   max-width: 400px;
-  height: 400px;
+  height: 60%;
   border-radius: 10px;
   background-color: #fff;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);

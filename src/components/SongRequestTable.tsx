@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabaseClient';
 import fetchTrackId from '../../utils/fetchTrackId';
 
-// Define the structure of a request
 type Request = {
   id: string;
   show_id: string;
   artist: string;
   song: string; // This is the song title
+  thumbnail: string | null; // Allow thumbnail to be nullable
   dedication?: string;
   status?: string;
   created_at: string;
@@ -61,8 +61,7 @@ const toggleButtonStyle: React.CSSProperties = {
   marginBottom: '16px',
 };
 
-const SongRequestTable: React.FC<{ showId: string; code: string; token: string }> = ({ showId, code, token }) => {
-  const [requests, setRequests] = useState<Request[]>([]);
+const SongRequestTable: React.FC<{ requests: Request[]; setRequests: React.Dispatch<React.SetStateAction<Request[]>>; token: string }> = ({ requests, setRequests, token }) => {
   const [loading, setLoading] = useState(true);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
@@ -71,7 +70,7 @@ const SongRequestTable: React.FC<{ showId: string; code: string; token: string }
       const { data, error } = await supabase
         .from('requests')
         .select('*')
-        .eq('show_id', showId)
+        .eq('show_id', requests[0]?.show_id)
         .order('created_at', { ascending: sortOrder === 'asc' });
 
       if (error) {
@@ -88,7 +87,7 @@ const SongRequestTable: React.FC<{ showId: string; code: string; token: string }
       .channel('custom-all-channel')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'requests', filter: `show_id=eq.${showId}` },
+        { event: '*', schema: 'public', table: 'requests', filter: `show_id=eq.${requests[0]?.show_id}` },
         (payload) => {
           if (payload.eventType === 'INSERT') {
             setRequests((prev) =>
@@ -111,10 +110,23 @@ const SongRequestTable: React.FC<{ showId: string; code: string; token: string }
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [showId, sortOrder]);
+  }, [requests[0]?.show_id, sortOrder]);
 
   const toggleSortOrder = () => {
     setSortOrder((prevOrder) => (prevOrder === 'asc' ? 'desc' : 'asc'));
+  };
+
+  const deleteRequest = async (requestId: string) => {
+    const { error } = await supabase
+      .from('requests')
+      .delete()
+      .eq('id', requestId);
+
+    if (error) {
+      console.error('Error deleting request:', error);
+    } else {
+      setRequests((prevRequests) => prevRequests.filter((request) => request.id !== requestId));
+    }
   };
 
   const addToPlaylist = async (song: string, artist: string, requestId: string) => {
@@ -199,7 +211,7 @@ const SongRequestTable: React.FC<{ showId: string; code: string; token: string }
               <td style={tdStyle}>{request.status}</td>
               <td style={tdStyle}>
                 <button style={editButtonStyle}>Edit</button>
-                <button style={deleteButtonStyle}>Delete</button>
+                <button style={deleteButtonStyle} onClick={() => deleteRequest(request.id)}>Delete</button>
                 <button
                   style={{ ...buttonStyle, backgroundColor: '#1DB954' }}
                   onClick={() => addToPlaylist(request.song, request.artist, request.id)}

@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../../utils/supabaseClient';
-import fetchTrackId from '../../utils/fetchTrackId';
+import React from 'react';
 import TinderCard from 'react-tinder-card';
+import fetchTrackId from '../../utils/fetchTrackId';
 
 type Request = {
   id: string;
@@ -14,36 +13,7 @@ type Request = {
   created_at: string;
 };
 
-const SwipingInterface: React.FC<{ showId: string; code: string; token: string }> = ({ showId, code, token }) => {
-  const [requests, setRequests] = useState<Request[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchRequests = async () => {
-      const { data, error } = await supabase
-        .from('requests')
-        .select('*')
-        .eq('show_id', showId)
-        .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching song requests:', error);
-      } else {
-        const requestsWithThumbnails = await Promise.all(data.map(async (request: Request) => {
-          const trackInfo = await fetchTrackId(request.song, request.artist, token);
-          return {
-            ...request,
-            thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/150' // Provide a default thumbnail if null
-          };
-        }));
-        setRequests(requestsWithThumbnails);
-      }
-      setLoading(false);
-    };
-
-    fetchRequests();
-  }, [showId, token]);
-
+const SwipingInterface: React.FC<{ requests: Request[]; setRequests: React.Dispatch<React.SetStateAction<Request[]>>; token: string }> = ({ requests, setRequests, token }) => {
   const onSwipe = async (direction: string, request: Request) => {
     if (direction === 'right') {
       const trackInfo = await fetchTrackId(request.song, request.artist, token);
@@ -86,10 +56,6 @@ const SwipingInterface: React.FC<{ showId: string; code: string; token: string }
     // Remove the song from the list regardless of swipe direction
     setRequests((prevRequests) => prevRequests.filter((r) => r.id !== request.id));
   };
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
 
   if (requests.length === 0) {
     return <div>No song requests found for this show.</div>;
