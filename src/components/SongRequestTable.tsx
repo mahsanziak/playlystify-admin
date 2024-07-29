@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import fetchTrackId from '../../utils/fetchTrackId';
 
 type Request = {
@@ -67,18 +67,7 @@ const addButtonStyle: React.CSSProperties = {
   backgroundColor: '#1DB954',
 };
 
-const toggleButtonStyle: React.CSSProperties = {
-  ...buttonStyle,
-  backgroundColor: '#10b981',
-  marginBottom: '16px',
-};
-
 const SongRequestTable: React.FC<{ requests: Request[]; token: string; addToQueue: (song: string, artist: string, requestId: string) => void; deleteRequest: (requestId: string) => void }> = ({ requests, token, addToQueue, deleteRequest }) => {
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-
-  const toggleSortOrder = () => {
-    setSortOrder((prevOrder) => (prevOrder === 'asc' ? 'desc' : 'asc'));
-  };
 
   if (requests.length === 0) {
     return <div>No song requests found for this show.</div>;
@@ -86,9 +75,6 @@ const SongRequestTable: React.FC<{ requests: Request[]; token: string; addToQueu
 
   return (
     <div style={{ overflowX: 'auto', marginTop: '24px' }}>
-      <button style={toggleButtonStyle} onClick={toggleSortOrder}>
-        Toggle Sort Order ({sortOrder === 'asc' ? 'Newest First' : 'Oldest First'})
-      </button>
       <table style={tableStyle}>
         <thead>
           <tr>
