@@ -1,5 +1,4 @@
 import React from 'react';
-import fetchTrackId from '../../utils/fetchTrackId';
 
 type Request = {
   id: string;

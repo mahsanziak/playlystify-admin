@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Header from '../../../../components/Header';
 import SongRequestTable from '../../../../components/SongRequestTable';
-import SwipingInterface from '../../../../components/SwipingInterface';
 import { supabase } from '../../../../../utils/supabaseClient';
 import fetchTrackId from '../../../../../utils/fetchTrackId';
 
@@ -17,6 +16,9 @@ const pageStyle: React.CSSProperties = {
 const mainStyle: React.CSSProperties = {
   flex: '1',
   padding: '32px',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
 };
 
 const headingStyle: React.CSSProperties = {
@@ -24,7 +26,12 @@ const headingStyle: React.CSSProperties = {
   marginBottom: '16px',
   fontWeight: '700',
   color: '#4caf50',
-  fontFamily: 'Helvetica, Arial, sans-serif',
+  fontFamily: 'Montserrat, sans-serif', // Applied Montserrat font
+  textAlign: 'center',
+};
+
+const listContainerStyle: React.CSSProperties = {
+  width: '100%',
 };
 
 type Request = {
@@ -45,12 +52,7 @@ const ShowPage: React.FC = () => {
   const [validShow, setValidShow] = useState(false);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(process.env.NEXT_PUBLIC_SPOTIFY_TOKEN || null);
-  const [isMobileView, setIsMobileView] = useState(false);
   const [requests, setRequests] = useState<Request[]>([]);
-
-  const toggleView = () => {
-    setIsMobileView((prevView) => !prevView);
-  };
 
   useEffect(() => {
     const validateShow = async () => {
@@ -196,7 +198,9 @@ const ShowPage: React.FC = () => {
   if (!validShow) {
     return (
       <div style={pageStyle}>
-        <Header isMobileView={isMobileView} toggleView={toggleView} />
+        <Header isMobileView={false} toggleView={function (): void {
+          throw new Error('Function not implemented.');
+        } } />
         <main style={mainStyle}>
           <h2 style={{ ...headingStyle, color: '#ef4444' }}>Invalid Show ID or Code</h2>
           <p>Please check the URL and try again.</p>
@@ -207,14 +211,14 @@ const ShowPage: React.FC = () => {
 
   return (
     <div style={pageStyle}>
-      <Header isMobileView={isMobileView} toggleView={toggleView} />
+      <Header isMobileView={false} toggleView={function (): void {
+        throw new Error('Function not implemented.');
+      } } />
       <main style={mainStyle}>
-        {showName && <h2 style={headingStyle}>{showName}</h2>}
-        {isMobileView ? (
-          <SwipingInterface requests={requests} token={token!} addToQueue={addToQueue} deleteRequest={deleteRequest} />
-        ) : (
+        {showName && <h1 style={headingStyle}>{showName}</h1>}
+        <div style={listContainerStyle}>
           <SongRequestTable requests={requests} token={token!} addToQueue={addToQueue} deleteRequest={deleteRequest} />
-        )}
+        </div>
       </main>
     </div>
   );
