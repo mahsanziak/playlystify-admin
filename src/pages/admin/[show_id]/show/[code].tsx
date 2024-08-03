@@ -106,17 +106,23 @@ const ShowPage: React.FC = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'requests', filter: `show_id=eq.${show_id}` },
-        (payload) => {
+        async (payload) => {
           if (payload.eventType === 'INSERT') {
-            setRequests((prevRequests) => [...prevRequests, payload.new as Request]);
+            const trackInfo = await fetchTrackId(payload.new.song, payload.new.artist, token!);
+            setRequests((prevRequests) => [
+              ...prevRequests, 
+              { ...payload.new, thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/50' }
+            ]);
           } else if (payload.eventType === 'UPDATE') {
             setRequests((prevRequests) =>
               prevRequests.map((request) =>
-                request.id === (payload.new as Request).id ? (payload.new as Request) : request
+                request.id === payload.new.id 
+                  ? { ...payload.new, thumbnail: request.thumbnail || 'https://via.placeholder.com/50' }
+                  : request
               )
             );
           } else if (payload.eventType === 'DELETE') {
-            setRequests((prevRequests) => prevRequests.filter((request) => request.id !== (payload.old as Request).id));
+            setRequests((prevRequests) => prevRequests.filter((request) => request.id !== payload.old.id));
           }
         }
       );
@@ -169,8 +175,20 @@ const ShowPage: React.FC = () => {
         alert(`Error adding track to playlist: ${data.error.message}`);
       } else {
         console.log('Track added to playlist:', data);
-        // Remove the song from the list
-        setRequests((prevRequests) => prevRequests.filter((request) => request.id !== requestId));
+
+        // Remove the song request from Supabase
+        const { error } = await supabase
+          .from('requests')
+          .delete()
+          .eq('id', requestId);
+
+        if (error) {
+          console.error('Error deleting request:', error);
+          alert('Error removing song request. Please try again.');
+        } else {
+          // Remove the song from the list
+          setRequests((prevRequests) => prevRequests.filter((request) => request.id !== requestId));
+        }
       }
     } catch (error) {
       console.error('Error adding track to playlist:', error);

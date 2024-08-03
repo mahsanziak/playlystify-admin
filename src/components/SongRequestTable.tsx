@@ -33,7 +33,6 @@ const tdStyle: React.CSSProperties = {
   color: '#f1f1f1',
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'space-between',
 };
 
 const thumbnailStyle: React.CSSProperties = {
@@ -41,6 +40,25 @@ const thumbnailStyle: React.CSSProperties = {
   height: '50px',
   marginRight: '10px',
   borderRadius: '5px',
+};
+
+const textContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  flex: 1,
+};
+
+const songNameStyle: React.CSSProperties = {
+  fontWeight: 'bold',
+};
+
+const artistNameStyle: React.CSSProperties = {
+  color: '#aaa', // Lighter color to distinguish from song title
+};
+
+const buttonContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  marginLeft: 'auto',
 };
 
 const buttonStyle: React.CSSProperties = {
@@ -85,11 +103,11 @@ const SongRequestTable: React.FC<{ requests: Request[]; token: string; addToQueu
             <tr key={request.id}>
               <td style={tdStyle}>
                 <img src={request.thumbnail || 'https://via.placeholder.com/50'} alt="thumbnail" style={thumbnailStyle} />
-                <div>
-                  <div>{request.song}</div>
-                  <div>{request.artist}</div>
+                <div style={textContainerStyle}>
+                  <div style={songNameStyle}>{request.song}</div>
+                  <div style={artistNameStyle}>{request.artist}</div>
                 </div>
-                <div>
+                <div style={buttonContainerStyle}>
                   <button style={deleteButtonStyle} onClick={() => deleteRequest(request.id)}>×</button>
                   <button style={addButtonStyle} onClick={() => addToQueue(request.song, request.artist, request.id)}>+</button>
                 </div>
