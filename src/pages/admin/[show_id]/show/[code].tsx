@@ -45,60 +45,33 @@ type Request = {
   created_at: string;
 };
 
-const ShowPage: React.FC = () => {
+const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: string }> = ({ initialRequests, showName, token }) => {
   const router = useRouter();
-  const { show_id, code } = router.query;
-  const [showName, setShowName] = useState<string | null>(null);
-  const [validShow, setValidShow] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState<string | null>(process.env.NEXT_PUBLIC_SPOTIFY_TOKEN || null);
-  const [requests, setRequests] = useState<Request[]>([]);
+  const { show_id } = router.query;
+  const [requests, setRequests] = useState<Request[]>(initialRequests);
 
   useEffect(() => {
-    const validateShow = async () => {
-      if (show_id && code) {
-        const { data, error } = await supabase
-          .from('shows')
-          .select('id, code, name')
-          .eq('id', show_id)
-          .eq('code', code)
-          .single();
-
-        if (data) {
-          setValidShow(true);
-          setShowName(data.name);
-        } else {
-          console.error('Invalid show_id or code:', error);
-          setValidShow(false);
-        }
-        setLoading(false);
-      }
-    };
-
     const fetchRequests = async () => {
-      if (show_id && code && token) {
-        const { data, error } = await supabase
-          .from('requests')
-          .select('*')
-          .eq('show_id', show_id)
-          .order('created_at', { ascending: true });
+      const { data, error } = await supabase
+        .from('requests')
+        .select('*')
+        .eq('show_id', show_id)
+        .order('created_at', { ascending: true });
 
-        if (error) {
-          console.error('Error fetching song requests:', error);
-        } else {
-          const requestsWithThumbnails = await Promise.all(data.map(async (request: Request) => {
-            const trackInfo = await fetchTrackId(request.song, request.artist, token!);
-            return {
-              ...request,
-              thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/150'
-            };
-          }));
-          setRequests(requestsWithThumbnails);
-        }
+      if (error) {
+        console.error('Error fetching song requests:', error);
+      } else {
+        const requestsWithThumbnails = await Promise.all(data.map(async (request: Request) => {
+          const trackInfo = await fetchTrackId(request.song, request.artist, show_id as string);
+          return {
+            ...request,
+            thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/150'
+          };
+        }));
+        setRequests(requestsWithThumbnails);
       }
     };
 
-    validateShow();
     fetchRequests();
 
     const channel = supabase
@@ -108,16 +81,16 @@ const ShowPage: React.FC = () => {
         { event: '*', schema: 'public', table: 'requests', filter: `show_id=eq.${show_id}` },
         async (payload) => {
           if (payload.eventType === 'INSERT') {
-            const trackInfo = await fetchTrackId(payload.new.song, payload.new.artist, token!);
+            const trackInfo = await fetchTrackId(payload.new.song, payload.new.artist, show_id as string);
             setRequests((prevRequests) => [
               ...prevRequests, 
-              { ...payload.new, thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/50' }
+              { ...payload.new, thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/50' } as Request
             ]);
           } else if (payload.eventType === 'UPDATE') {
             setRequests((prevRequests) =>
               prevRequests.map((request) =>
                 request.id === payload.new.id 
-                  ? { ...payload.new, thumbnail: request.thumbnail || 'https://via.placeholder.com/50' }
+                  ? { ...payload.new, thumbnail: payload.new.thumbnail || request.thumbnail || 'https://via.placeholder.com/50' } as Request
                   : request
               )
             );
@@ -132,17 +105,12 @@ const ShowPage: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [show_id, code, token]);
+  }, [show_id]);
 
   const addToQueue = async (song: string, artist: string, requestId: string) => {
     const playlistId = '56eZf25Jow0s4brTYx2mCb'; // Your Spotify playlist ID
 
-    if (!token) {
-      alert('Spotify token is not available');
-      return;
-    }
-
-    const trackInfo = await fetchTrackId(song, artist, token);
+    const trackInfo = await fetchTrackId(song, artist, show_id as string);
 
     if (!trackInfo.id) {
       alert('Could not find track on Spotify');
@@ -209,37 +177,71 @@ const ShowPage: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: '32px' }}>Loading...</div>;
-  }
-
-  if (!validShow) {
-    return (
-      <div style={pageStyle}>
-        <Header isMobileView={false} toggleView={function (): void {
-          throw new Error('Function not implemented.');
-        } } />
-        <main style={mainStyle}>
-          <h2 style={{ ...headingStyle, color: '#ef4444' }}>Invalid Show ID or Code</h2>
-          <p>Please check the URL and try again.</p>
-        </main>
-      </div>
-    );
-  }
-
   return (
     <div style={pageStyle}>
-      <Header isMobileView={false} toggleView={function (): void {
-        throw new Error('Function not implemented.');
-      } } />
+      <Header />
       <main style={mainStyle}>
         {showName && <h1 style={headingStyle}>{showName}</h1>}
         <div style={listContainerStyle}>
-          <SongRequestTable requests={requests} token={token!} addToQueue={addToQueue} deleteRequest={deleteRequest} />
+          <SongRequestTable requests={requests} token={token} addToQueue={addToQueue} deleteRequest={deleteRequest} />
         </div>
       </main>
     </div>
   );
+};
+
+export const getServerSideProps = async (context: any) => {
+  const { show_id, code } = context.query;
+
+  const { data: showData, error: showError } = await supabase
+    .from('shows')
+    .select('id, code, name')
+    .eq('id', show_id)
+    .eq('code', code)
+    .single();
+
+  if (showError || !showData) {
+    return { notFound: true };
+  }
+
+  const { data: requestData, error: requestError } = await supabase
+    .from('requests')
+    .select('*')
+    .eq('show_id', show_id)
+    .order('created_at', { ascending: true });
+
+  if (requestError) {
+    console.error('Error fetching song requests:', requestError);
+    return { notFound: true };
+  }
+
+  const requestsWithThumbnails = await Promise.all(requestData.map(async (request: any) => {
+    const trackInfo = await fetchTrackId(request.song, request.artist, show_id as string);
+    return {
+      ...request,
+      thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/150'
+    };
+  }));
+
+  // Fetch the token
+  const { data: tokenData, error: tokenError } = await supabase
+    .from('tokens')
+    .select('access_token')
+    .eq('show_id', show_id)
+    .single();
+
+  if (tokenError || !tokenData) {
+    console.error('Error fetching token:', tokenError);
+    return { notFound: true };
+  }
+
+  return {
+    props: {
+      initialRequests: requestsWithThumbnails,
+      showName: showData.name,
+      token: tokenData.access_token,
+    },
+  };
 };
 
 export default ShowPage;
