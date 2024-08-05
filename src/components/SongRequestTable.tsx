@@ -4,8 +4,8 @@ type Request = {
   id: string;
   show_id: string;
   artist: string;
-  song: string; // This is the song title
-  thumbnail: string | null; // Allow thumbnail to be nullable
+  song: string;
+  thumbnail: string | null;
   dedication?: string;
   status?: string;
   created_at: string;

@@ -26,7 +26,7 @@ const headingStyle: React.CSSProperties = {
   marginBottom: '16px',
   fontWeight: '700',
   color: '#4caf50',
-  fontFamily: 'Montserrat, sans-serif', // Applied Montserrat font
+  fontFamily: 'Montserrat, sans-serif',
   textAlign: 'center',
 };
 
@@ -108,59 +108,56 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
   }, [show_id]);
 
   const addToQueue = async (song: string, artist: string, requestId: string) => {
-    const playlistId = '56eZf25Jow0s4brTYx2mCb'; // Your Spotify playlist ID
-
-    const trackInfo = await fetchTrackId(song, artist, show_id as string);
-
-    if (!trackInfo.id) {
-      alert('Could not find track on Spotify');
-      return;
-    }
-
-    const trackUri = `spotify:track:${trackInfo.id}`;
-
-    // Validate the track ID format (base62)
-    const isValidBase62 = /^[0-9A-Za-z]+$/.test(trackInfo.id);
-    if (!isValidBase62) {
-      alert('Invalid track ID format');
-      return;
-    }
-
     try {
-      const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+      const trackInfo = await fetchTrackId(song, artist, show_id as string);
+
+      if (!trackInfo.id) {
+        alert('Could not find track on Spotify');
+        return;
+      }
+
+      const trackUri = `spotify:track:${trackInfo.id}`;
+
+      // Add the track to the queue instead of the playlist
+      const response = await fetch(`https://api.spotify.com/v1/me/player/queue?uri=${trackUri}`, {
         method: 'POST',
-        body: JSON.stringify({ uris: [trackUri] }),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        console.error('Error adding track to playlist:', data);
-        alert(`Error adding track to playlist: ${data.error.message}`);
-      } else {
-        console.log('Track added to playlist:', data);
-
-        // Remove the song request from Supabase
-        const { error } = await supabase
-          .from('requests')
-          .delete()
-          .eq('id', requestId);
-
-        if (error) {
-          console.error('Error deleting request:', error);
-          alert('Error removing song request. Please try again.');
+        const errorData = await response.json();
+        if (errorData.error?.reason === 'NO_ACTIVE_DEVICE') {
+          alert('No active Spotify device found. Please start playing a song on any device before adding to the queue.');
         } else {
-          // Remove the song from the list
-          setRequests((prevRequests) => prevRequests.filter((request) => request.id !== requestId));
+          alert(`Error adding track to queue: ${errorData.error?.message || 'Unknown error'}`);
         }
+        return;
+      }
+
+      console.log('Track added to queue:', trackInfo.id);
+
+      // Optionally monitor and remove the song from the playlist
+      await monitorAndRemoveFromPlaylist('your_playlist_id', trackUri);
+
+      // Remove the song request from Supabase
+      const { error } = await supabase
+        .from('requests')
+        .delete()
+        .eq('id', requestId);
+
+      if (error) {
+        console.error('Error deleting request:', error);
+        alert('Error removing song request. Please try again.');
+      } else {
+        // Remove the song from the list
+        setRequests((prevRequests) => prevRequests.filter((request) => request.id !== requestId));
       }
     } catch (error) {
-      console.error('Error adding track to playlist:', error);
-      alert('Error adding track to playlist. Check the console for more details.');
+      console.error('Error adding track to queue:', error);
+      alert('Error adding track to queue. Check the console for more details.');
     }
   };
 
@@ -175,6 +172,48 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
     } else {
       setRequests((prevRequests) => prevRequests.filter((request) => request.id !== requestId));
     }
+  };
+
+  // Function to monitor playback and remove song from the playlist
+  const monitorAndRemoveFromPlaylist = async (playlistId: string, trackUri: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.status === 204) {
+          // No track currently playing
+          return;
+        }
+
+        const data = await response.json();
+
+        if (data.item.uri === trackUri) {
+          // The song is currently playing
+          return;
+        }
+
+        // The song is not currently playing, remove it from the playlist
+        await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            tracks: [{ uri: trackUri }]
+          })
+        });
+
+        clearInterval(interval);
+      } catch (error) {
+        console.error('Error monitoring and removing track:', error);
+        clearInterval(interval);
+      }
+    }, 5000); // Check every 5 seconds
   };
 
   return (
