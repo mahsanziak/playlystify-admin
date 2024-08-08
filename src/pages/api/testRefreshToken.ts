@@ -1,7 +1,7 @@
 // pages/api/testRefreshToken.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../../utils/supabaseClient';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 const client_id = process.env.SPOTIFY_CLIENT_ID!;
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET!;
@@ -61,14 +61,23 @@ const refreshTokens = async (req: NextApiRequest, res: NextApiResponse) => {
           console.error('Error refreshing token for show_id:', show_id, response.data);
         }
       } catch (error) {
-        console.error('Error refreshing token for show_id:', show_id, error.response?.data || error.message);
+        if (axios.isAxiosError(error)) {
+          console.error('Error refreshing token for show_id:', show_id, error.response?.data || error.message);
+        } else {
+          console.error('Error refreshing token for show_id:', show_id, (error as Error).message);
+        }
       }
     }
 
     res.status(200).json({ message: 'Token refresh process completed' });
   } catch (error) {
-    console.error('Error during the token refresh process:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    if (axios.isAxiosError(error)) {
+      console.error('Error during the token refresh process:', error.response?.data || error.message);
+      res.status(500).json({ error: 'Internal server error', details: error.response?.data || error.message });
+    } else {
+      console.error('Error during the token refresh process:', (error as Error).message);
+      res.status(500).json({ error: 'Internal server error', details: (error as Error).message });
+    }
   }
 };
 

@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabaseClient';
 
+interface ReadyEventData {
+  device_id: string;
+}
+
 const useSpotifyPlayer = (showId: string) => {
   const [player, setPlayer] = useState<Spotify.Player | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
@@ -43,12 +47,13 @@ const useSpotifyPlayer = (showId: string) => {
         volume: 0.5,
       });
 
-      player.addListener('ready', (data) => {
+      player.addListener('ready', (data: ReadyEventData) => {
         setDeviceId(data.device_id);
         setIsReady(true);
       });
 
-      player.addListener('not_ready', (data) => {
+      player.addListener('not_ready', (data: ReadyEventData) => {
+        setDeviceId(data.device_id);
         setIsReady(false);
       });
 
@@ -70,7 +75,6 @@ const useSpotifyPlayer = (showId: string) => {
   useEffect(() => {
     const interval = setInterval(async () => {
       if (refreshToken && showId) {
-        console.log('Attempting to refresh token with refreshToken:', refreshToken);
         const response = await fetch('/api/refreshToken', {
           method: 'POST',
           headers: {
@@ -80,28 +84,13 @@ const useSpotifyPlayer = (showId: string) => {
         });
 
         if (response.ok) {
-          const { access_token, refresh_token } = await response.json();
-          console.log('New access token:', access_token);
-          console.log('New refresh token:', refresh_token);
+          const { access_token } = await response.json();
           setToken(access_token);
-          setRefreshToken(refresh_token);
-
-          // Update tokens in Supabase
-          const { error } = await supabase
-            .from('tokens')
-            .update({ access_token, refresh_token })
-            .eq('show_id', showId);
-
-          if (error) {
-            console.error('Error updating tokens in Supabase:', error);
-          } else {
-            console.log('Updated tokens in Supabase');
-          }
         } else {
           console.error('Error refreshing token');
         }
       }
-    }, 6000); // Refresh every 6 seconds for testing
+    }, 6000); // Refresh every 6 seconds
 
     return () => clearInterval(interval);
   }, [refreshToken, showId]);

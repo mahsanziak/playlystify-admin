@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../../utils/supabaseClient';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 const client_id = process.env.SPOTIFY_CLIENT_ID!;
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET!;
@@ -41,7 +41,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
       res.status(500).json({ error: 'Internal server error', details: error.response?.data || error.message });
     } else {
       console.error('Error refreshing tokens:', error);
-      res.status(500).json({ error: 'Internal server error', details: error.message });
+      res.status(500).json({ error: 'Internal server error', details: (error as Error).message });
     }
   }
 };
