@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabaseClient';
 
-interface ReadyEventData {
-  device_id: string;
-}
-
 const useSpotifyPlayer = (showId: string) => {
   const [player, setPlayer] = useState<Spotify.Player | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
@@ -47,19 +43,23 @@ const useSpotifyPlayer = (showId: string) => {
         volume: 0.5,
       });
 
-      player.addListener('ready', (data: any) => {
-        const readyData = data as ReadyEventData;
-        setDeviceId(readyData.device_id);
-        setIsReady(true);
+      player.addListener('ready', (data) => {
+        if ('device_id' in data) {
+          const readyData = data as Spotify.ReadyEventData;
+          setDeviceId(readyData.device_id);
+          setIsReady(true);
+        }
       });
 
-      player.addListener('not_ready', (data: any) => {
-        const readyData = data as ReadyEventData;
-        setDeviceId(readyData.device_id);
-        setIsReady(false);
+      player.addListener('not_ready', (data) => {
+        if ('device_id' in data) {
+          const readyData = data as Spotify.ReadyEventData;
+          setDeviceId(readyData.device_id);
+          setIsReady(false);
+        }
       });
 
-      player.addListener('player_state_changed', (state: Spotify.PlaybackState) => {
+      player.addListener('player_state_changed', (state) => {
         console.log('Player state changed', state);
       });
 

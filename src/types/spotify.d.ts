@@ -1,12 +1,13 @@
+// types/spotify.d.ts
 declare namespace Spotify {
   interface Player {
-    new(options: PlayerOptions): Player;
+    new (options: PlayerOptions): Player;
     connect(): Promise<boolean>;
     disconnect(): void;
     addListener(
       event: 'ready' | 'not_ready' | 'player_state_changed',
-      callback: (state: PlayerState | { device_id: string }) => void
-    ): boolean;
+      callback: (state: PlayerState | ReadyEventData) => void
+    ): void;
   }
 
   interface PlayerOptions {
@@ -38,6 +39,10 @@ declare namespace Spotify {
         id: string;
       }[];
     };
+  }
+
+  interface ReadyEventData {
+    device_id: string;
   }
 }
 
