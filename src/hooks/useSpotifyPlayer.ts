@@ -47,17 +47,19 @@ const useSpotifyPlayer = (showId: string) => {
         volume: 0.5,
       });
 
-      player.addListener('ready', (data: ReadyEventData) => {
-        setDeviceId(data.device_id);
+      player.addListener('ready', (data: any) => {
+        const readyData = data as ReadyEventData;
+        setDeviceId(readyData.device_id);
         setIsReady(true);
       });
 
-      player.addListener('not_ready', (data: ReadyEventData) => {
-        setDeviceId(data.device_id);
+      player.addListener('not_ready', (data: any) => {
+        const readyData = data as ReadyEventData;
+        setDeviceId(readyData.device_id);
         setIsReady(false);
       });
 
-      player.addListener('player_state_changed', (state) => {
+      player.addListener('player_state_changed', (state: Spotify.PlaybackState) => {
         console.log('Player state changed', state);
       });
 
