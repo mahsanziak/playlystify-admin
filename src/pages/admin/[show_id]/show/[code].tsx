@@ -49,6 +49,7 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
   const router = useRouter();
   const { show_id } = router.query;
   const [requests, setRequests] = useState<Request[]>(initialRequests);
+  const [autoplay, setAutoplay] = useState(false); // State for autoplay
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -82,21 +83,19 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
         async (payload) => {
           if (payload.eventType === 'INSERT') {
             const trackInfo = await fetchTrackId(payload.new.song, payload.new.artist, show_id as string);
+            const newRequest = { ...payload.new, thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/50' } as Request;
+            
             setRequests((prevRequests) => [
               ...prevRequests, 
-              { ...payload.new, thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/50' } as Request
+              newRequest
             ]);
-          } else if (payload.eventType === 'UPDATE') {
-            setRequests((prevRequests) =>
-              prevRequests.map((request) =>
-                request.id === payload.new.id 
-                  ? { ...payload.new, thumbnail: payload.new.thumbnail || request.thumbnail || 'https://via.placeholder.com/50' } as Request
-                  : request
-              )
-            );
-          } else if (payload.eventType === 'DELETE') {
-            setRequests((prevRequests) => prevRequests.filter((request) => request.id !== payload.old.id));
+
+            // Automatically add to queue if autoplay is enabled
+            if (autoplay) {
+              await addToQueue(newRequest.song, newRequest.artist, newRequest.id);
+            }
           }
+          // ... other event handlers (UPDATE, DELETE)
         }
       );
 
@@ -105,7 +104,7 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [show_id]);
+  }, [show_id, autoplay]);
 
   const addToQueue = async (song: string, artist: string, requestId: string) => {
     try {
@@ -139,9 +138,6 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
 
       console.log('Track added to queue:', trackInfo.id);
 
-      // Optionally monitor and remove the song from the playlist
-      await monitorAndRemoveFromPlaylist('your_playlist_id', trackUri);
-
       // Remove the song request from Supabase
       const { error } = await supabase
         .from('requests')
@@ -174,55 +170,16 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
     }
   };
 
-  // Function to monitor playback and remove song from the playlist
-  const monitorAndRemoveFromPlaylist = async (playlistId: string, trackUri: string) => {
-    const interval = setInterval(async () => {
-      try {
-        const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (response.status === 204) {
-          // No track currently playing
-          return;
-        }
-
-        const data = await response.json();
-
-        if (data.item.uri === trackUri) {
-          // The song is currently playing
-          return;
-        }
-
-        // The song is not currently playing, remove it from the playlist
-        await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            tracks: [{ uri: trackUri }]
-          })
-        });
-
-        clearInterval(interval);
-      } catch (error) {
-        console.error('Error monitoring and removing track:', error);
-        clearInterval(interval);
-      }
-    }, 5000); // Check every 5 seconds
-  };
-
   return (
     <div style={pageStyle}>
       <Header />
       <main style={mainStyle}>
         {showName && <h1 style={headingStyle}>{showName}</h1>}
         <div style={listContainerStyle}>
-          <SongRequestTable requests={requests} token={token} addToQueue={addToQueue} deleteRequest={deleteRequest} />
+          <button onClick={() => setAutoplay(prev => !prev)}>
+            {autoplay ? "Disable Autoplay" : "Enable Autoplay"}
+          </button>
+          <SongRequestTable requests={requests} token={token} autoplay={autoplay} addToQueue={addToQueue} deleteRequest={deleteRequest} />
         </div>
       </main>
     </div>

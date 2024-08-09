@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 type Request = {
   id: string;
@@ -84,7 +84,14 @@ const addButtonStyle: React.CSSProperties = {
   backgroundColor: '#1DB954',
 };
 
-const SongRequestTable: React.FC<{ requests: Request[]; token: string; addToQueue: (song: string, artist: string, requestId: string) => void; deleteRequest: (requestId: string) => void }> = ({ requests, token, addToQueue, deleteRequest }) => {
+const SongRequestTable: React.FC<{ requests: Request[]; token: string; autoplay: boolean; addToQueue: (song: string, artist: string, requestId: string) => void; deleteRequest: (requestId: string) => void }> = ({ requests, token, autoplay, addToQueue, deleteRequest }) => {
+
+  useEffect(() => {
+    if (autoplay) {
+      // Automatically add all songs to queue and remove from the list
+      requests.forEach(request => addToQueue(request.song, request.artist, request.id));
+    }
+  }, [autoplay]);
 
   if (requests.length === 0) {
     return <div>No song requests found for this show.</div>;
@@ -108,8 +115,12 @@ const SongRequestTable: React.FC<{ requests: Request[]; token: string; addToQueu
                   <div style={artistNameStyle}>{request.artist}</div>
                 </div>
                 <div style={buttonContainerStyle}>
-                  <button style={deleteButtonStyle} onClick={() => deleteRequest(request.id)}>×</button>
-                  <button style={addButtonStyle} onClick={() => addToQueue(request.song, request.artist, request.id)}>+</button>
+                  {!autoplay && (
+                    <>
+                      <button style={deleteButtonStyle} onClick={() => deleteRequest(request.id)}>×</button>
+                      <button style={addButtonStyle} onClick={() => addToQueue(request.song, request.artist, request.id)}>+</button>
+                    </>
+                  )}
                 </div>
               </td>
             </tr>
