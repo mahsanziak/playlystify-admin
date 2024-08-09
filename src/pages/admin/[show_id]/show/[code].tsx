@@ -9,8 +9,11 @@ const pageStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   minHeight: '100vh',
-  backgroundColor: '#1e1e1e',
+  background: 'linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.3)), url(/path-to-your-background-image.jpg) no-repeat center center fixed',
+  backgroundSize: 'cover',
   color: '#f1f1f1',
+  fontFamily: '"SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  fontWeight: 300,
 };
 
 const mainStyle: React.CSSProperties = {
@@ -22,16 +25,41 @@ const mainStyle: React.CSSProperties = {
 };
 
 const headingStyle: React.CSSProperties = {
-  fontSize: '32px',
+  fontSize: '24px',
   marginBottom: '16px',
   fontWeight: '700',
-  color: '#4caf50',
-  fontFamily: 'Montserrat, sans-serif',
+  color: '#ffffff',
   textAlign: 'center',
 };
 
 const listContainerStyle: React.CSSProperties = {
   width: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  flexDirection: 'column',
+  gap: '16px',
+  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  borderRadius: '16px',
+  padding: '20px',
+};
+
+const toggleContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  marginBottom: '16px',
+  gap: '10px',
+  color: '#ffffff',
+};
+
+const buttonStyle: React.CSSProperties = {
+  padding: '10px 20px',
+  backgroundColor: '#ff4c4c',
+  color: 'white',
+  fontWeight: 'bold',
+  cursor: 'pointer',
+  border: 'none',
+  borderRadius: '8px',
+  marginBottom: '16px',
 };
 
 type Request = {
@@ -106,6 +134,13 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
     };
   }, [show_id, autoplay]);
 
+  useEffect(() => {
+    if (autoplay && requests.length > 0) {
+      // If autoplay is enabled, add all songs to the Spotify queue
+      requests.forEach(request => addToQueue(request.song, request.artist, request.id));
+    }
+  }, [autoplay]);
+
   const addToQueue = async (song: string, artist: string, requestId: string) => {
     try {
       const trackInfo = await fetchTrackId(song, artist, show_id as string);
@@ -170,16 +205,40 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
     }
   };
 
+  const clearAllRequests = async () => {
+    try {
+      // Clear all song requests without adding to Spotify
+      const { error } = await supabase
+        .from('requests')
+        .delete()
+        .eq('show_id', show_id);
+
+      if (error) {
+        console.error('Error clearing requests:', error);
+        alert('Error clearing requests. Please try again.');
+      } else {
+        setRequests([]);
+      }
+    } catch (error) {
+      console.error('Error clearing requests:', error);
+      alert('Error clearing requests. Check the console for more details.');
+    }
+  };
+
   return (
     <div style={pageStyle}>
       <Header />
       <main style={mainStyle}>
         {showName && <h1 style={headingStyle}>{showName}</h1>}
-        <div style={listContainerStyle}>
+        <div style={toggleContainerStyle}>
+          <span>Enable Autoplay</span>
           <label className="switch">
             <input type="checkbox" checked={autoplay} onChange={() => setAutoplay(prev => !prev)} />
             <span className="slider round"></span>
           </label>
+        </div>
+        <button style={buttonStyle} onClick={clearAllRequests}>Clear All</button>
+        <div style={listContainerStyle}>
           <SongRequestTable requests={requests} token={token} autoplay={autoplay} addToQueue={addToQueue} deleteRequest={deleteRequest} />
         </div>
       </main>
@@ -216,11 +275,10 @@ export const getServerSideProps = async (context: any) => {
     const trackInfo = await fetchTrackId(request.song, request.artist, show_id as string);
     return {
       ...request,
-      thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/150'
+      thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/50'
     };
   }));
 
-  // Fetch the token
   const { data: tokenData, error: tokenError } = await supabase
     .from('tokens')
     .select('access_token')

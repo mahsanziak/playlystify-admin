@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 type Request = {
   id: string;
@@ -12,121 +12,90 @@ type Request = {
 };
 
 const tableStyle: React.CSSProperties = {
-  minWidth: '100%',
-  backgroundColor: '#2c2c2c',
-  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-  borderRadius: '8px',
+  width: '100%',
+  marginTop: '20px',
+  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  borderRadius: '16px',
   overflow: 'hidden',
-  marginTop: '24px',
+  boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
 };
 
-const thStyle: React.CSSProperties = {
-  padding: '16px',
-  textAlign: 'left',
-  backgroundColor: '#1f1f1f',
-  color: '#f1f1f1',
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: '16px',
-  borderBottom: '1px solid #444',
-  color: '#f1f1f1',
+const rowStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
+  padding: '10px 20px',
+  borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
 };
 
 const thumbnailStyle: React.CSSProperties = {
   width: '50px',
   height: '50px',
-  marginRight: '10px',
-  borderRadius: '5px',
+  borderRadius: '8px',
+  marginRight: '20px',
 };
 
-const textContainerStyle: React.CSSProperties = {
+const songInfoStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  flex: 1,
 };
 
-const songNameStyle: React.CSSProperties = {
+const songTitleStyle: React.CSSProperties = {
   fontWeight: 'bold',
+  fontSize: '16px',
+  color: '#ffffff',
 };
 
 const artistNameStyle: React.CSSProperties = {
-  color: '#aaa', // Lighter color to distinguish from song title
+  fontSize: '14px',
+  color: '#cccccc',
 };
 
 const buttonContainerStyle: React.CSSProperties = {
-  display: 'flex',
   marginLeft: 'auto',
+  display: 'flex',
+  alignItems: 'center',
 };
 
 const buttonStyle: React.CSSProperties = {
-  padding: '8px',
-  borderRadius: '4px',
-  color: 'white',
-  fontWeight: 'bold',
-  cursor: 'pointer',
+  backgroundColor: '#1DB954',
+  color: '#ffffff',
   border: 'none',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+  borderRadius: '8px',
+  padding: '8px 16px',
+  cursor: 'pointer',
+  fontWeight: 'bold',
+  marginLeft: '10px',
 };
 
 const deleteButtonStyle: React.CSSProperties = {
   ...buttonStyle,
   backgroundColor: '#ef4444',
-  marginRight: '10px',
 };
 
-const addButtonStyle: React.CSSProperties = {
-  ...buttonStyle,
-  backgroundColor: '#1DB954',
-};
-
-const SongRequestTable: React.FC<{ requests: Request[]; token: string; autoplay: boolean; addToQueue: (song: string, artist: string, requestId: string) => void; deleteRequest: (requestId: string) => void }> = ({ requests, token, autoplay, addToQueue, deleteRequest }) => {
-
-  useEffect(() => {
-    if (autoplay) {
-      // Automatically add all songs to queue and remove from the list
-      requests.forEach(request => addToQueue(request.song, request.artist, request.id));
-    }
-  }, [autoplay]);
-
+const SongRequestTable: React.FC<{ requests: Request[], token: string, autoplay: boolean, addToQueue: (song: string, artist: string, requestId: string) => void, deleteRequest: (requestId: string) => void }> = ({ requests, token, autoplay, addToQueue, deleteRequest }) => {
   if (requests.length === 0) {
     return <div>No song requests found for this show.</div>;
   }
 
   return (
-    <div style={{ overflowX: 'auto', marginTop: '24px' }}>
-      <table style={tableStyle}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Song</th>
-          </tr>
-        </thead>
-        <tbody>
-          {requests.map((request) => (
-            <tr key={request.id}>
-              <td style={tdStyle}>
-                <img src={request.thumbnail || 'https://via.placeholder.com/50'} alt="thumbnail" style={thumbnailStyle} />
-                <div style={textContainerStyle}>
-                  <div style={songNameStyle}>{request.song}</div>
-                  <div style={artistNameStyle}>{request.artist}</div>
-                </div>
-                <div style={buttonContainerStyle}>
-                  {!autoplay && (
-                    <>
-                      <button style={deleteButtonStyle} onClick={() => deleteRequest(request.id)}>×</button>
-                      <button style={addButtonStyle} onClick={() => addToQueue(request.song, request.artist, request.id)}>+</button>
-                    </>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div style={{ width: '100%', marginTop: '24px' }}>
+      <div style={tableStyle}>
+        {requests.map((request) => (
+          <div key={request.id} style={rowStyle}>
+            <img src={request.thumbnail || 'https://via.placeholder.com/50'} alt="thumbnail" style={thumbnailStyle} />
+            <div style={songInfoStyle}>
+              <div style={songTitleStyle}>{request.song}</div>
+              <div style={artistNameStyle}>{request.artist}</div>
+            </div>
+            <div style={buttonContainerStyle}>
+              <button style={deleteButtonStyle} onClick={() => deleteRequest(request.id)}>×</button>
+              {!autoplay && (
+                <button style={buttonStyle} onClick={() => addToQueue(request.song, request.artist, request.id)}>+</button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
