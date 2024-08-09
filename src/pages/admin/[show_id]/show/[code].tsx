@@ -176,9 +176,10 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
       <main style={mainStyle}>
         {showName && <h1 style={headingStyle}>{showName}</h1>}
         <div style={listContainerStyle}>
-          <button onClick={() => setAutoplay(prev => !prev)}>
-            {autoplay ? "Disable Autoplay" : "Enable Autoplay"}
-          </button>
+          <label className="switch">
+            <input type="checkbox" checked={autoplay} onChange={() => setAutoplay(prev => !prev)} />
+            <span className="slider round"></span>
+          </label>
           <SongRequestTable requests={requests} token={token} autoplay={autoplay} addToQueue={addToQueue} deleteRequest={deleteRequest} />
         </div>
       </main>
