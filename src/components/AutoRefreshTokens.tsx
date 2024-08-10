@@ -14,7 +14,7 @@ const AutoRefreshTokens = () => {
       } catch (error) {
         console.error('Error refreshing tokens:', error);
       }
-    }, 60000); // Refresh every 6 seconds
+    }, 6000); // Refresh every 6 seconds
 
     return () => clearInterval(interval); // Clean up on unmount
   }, []);
