@@ -78,6 +78,7 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
   const { show_id } = router.query;
   const [requests, setRequests] = useState<Request[]>(initialRequests);
   const [autoplay, setAutoplay] = useState(false); // State for autoplay
+  const [processedRequests, setProcessedRequests] = useState<Set<string>>(new Set()); // Track processed requests by ID
 
   useEffect(() => {
     const fetchAutoplay = async () => {
@@ -134,7 +135,11 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
         // Automatically add to queue if autoplay is enabled
         if (autoplay && requestsWithThumbnails.length > 0) {
           for (const request of requestsWithThumbnails) {
-            await addToQueue(request.song, request.artist, request.id);
+            // Ensure the request hasn't already been processed
+            if (!processedRequests.has(request.id)) {
+              await addToQueue(request.song, request.artist, request.id);
+              setProcessedRequests(prev => new Set(prev).add(request.id)); // Mark as processed
+            }
           }
         }
       }
@@ -145,7 +150,7 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
 
     // Clean up interval on component unmount
     return () => clearInterval(interval);
-  }, [show_id, autoplay]);
+  }, [show_id, autoplay, processedRequests]);
 
   useEffect(() => {
     const channel = supabase
@@ -163,9 +168,10 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
               newRequest
             ]);
 
-            // Automatically add to queue if autoplay is enabled
-            if (autoplay) {
+            // Automatically add to queue if autoplay is enabled and hasn't been processed yet
+            if (autoplay && !processedRequests.has(newRequest.id)) {
               await addToQueue(newRequest.song, newRequest.artist, newRequest.id);
+              setProcessedRequests(prev => new Set(prev).add(newRequest.id)); // Mark as processed
             }
           }
         }
@@ -176,7 +182,7 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [show_id, autoplay]);
+  }, [show_id, autoplay, processedRequests]);
 
   const addToQueue = async (song: string, artist: string, requestId: string) => {
     try {
