@@ -130,11 +130,24 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
           };
         }));
         setRequests(requestsWithThumbnails);
+
+        // Automatically add to queue if autoplay is enabled
+        if (autoplay && requestsWithThumbnails.length > 0) {
+          for (const request of requestsWithThumbnails) {
+            await addToQueue(request.song, request.artist, request.id);
+          }
+        }
       }
     };
 
-    fetchRequests();
+    // Polling mechanism: Fetch requests every 2 seconds
+    const interval = setInterval(fetchRequests, 2000);
 
+    // Clean up interval on component unmount
+    return () => clearInterval(interval);
+  }, [show_id, autoplay]);
+
+  useEffect(() => {
     const channel = supabase
       .channel('custom-all-channel')
       .on(
@@ -146,7 +159,7 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
             const newRequest = { ...payload.new, thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/50' } as Request;
 
             setRequests((prevRequests) => [
-              ...prevRequests, 
+              ...prevRequests,
               newRequest
             ]);
 
@@ -164,13 +177,6 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
       supabase.removeChannel(channel);
     };
   }, [show_id, autoplay]);
-
-  useEffect(() => {
-    if (autoplay && requests.length > 0) {
-      // If autoplay is enabled, add all songs to the Spotify queue
-      requests.forEach(request => addToQueue(request.song, request.artist, request.id));
-    }
-  }, [autoplay]);
 
   const addToQueue = async (song: string, artist: string, requestId: string) => {
     try {
