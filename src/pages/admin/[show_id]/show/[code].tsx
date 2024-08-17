@@ -80,6 +80,38 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
   const [autoplay, setAutoplay] = useState(false); // State for autoplay
 
   useEffect(() => {
+    const fetchAutoplay = async () => {
+      const { data, error } = await supabase
+        .from('shows')
+        .select('autoplay')
+        .eq('id', show_id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching autoplay state:', error);
+      } else {
+        setAutoplay(data.autoplay);
+      }
+    };
+
+    fetchAutoplay();
+  }, [show_id]);
+
+  const toggleAutoplay = async () => {
+    const newAutoplayValue = !autoplay;
+    setAutoplay(newAutoplayValue);
+
+    const { error } = await supabase
+      .from('shows')
+      .update({ autoplay: newAutoplayValue })
+      .eq('id', show_id);
+
+    if (error) {
+      console.error('Error updating autoplay:', error);
+    }
+  };
+
+  useEffect(() => {
     const fetchRequests = async () => {
       const { data, error } = await supabase
         .from('requests')
@@ -112,7 +144,7 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
           if (payload.eventType === 'INSERT') {
             const trackInfo = await fetchTrackId(payload.new.song, payload.new.artist, show_id as string);
             const newRequest = { ...payload.new, thumbnail: trackInfo.thumbnail || 'https://via.placeholder.com/50' } as Request;
-            
+
             setRequests((prevRequests) => [
               ...prevRequests, 
               newRequest
@@ -123,7 +155,6 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
               await addToQueue(newRequest.song, newRequest.artist, newRequest.id);
             }
           }
-          // ... other event handlers (UPDATE, DELETE)
         }
       );
 
@@ -233,7 +264,7 @@ const ShowPage: React.FC<{ initialRequests: Request[], showName: string, token: 
         <div style={toggleContainerStyle}>
           <span>Enable Autoplay</span>
           <label className="switch">
-            <input type="checkbox" checked={autoplay} onChange={() => setAutoplay(prev => !prev)} />
+            <input type="checkbox" checked={autoplay} onChange={toggleAutoplay} />
             <span className="slider round"></span>
           </label>
         </div>
@@ -251,7 +282,7 @@ export const getServerSideProps = async (context: any) => {
 
   const { data: showData, error: showError } = await supabase
     .from('shows')
-    .select('id, code, name')
+    .select('id, code, name, autoplay')
     .eq('id', show_id)
     .eq('code', code)
     .single();
